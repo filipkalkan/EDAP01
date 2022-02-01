@@ -1,3 +1,4 @@
+from json.encoder import INFINITY
 import gym
 import random
 import requests
@@ -11,7 +12,7 @@ env: ConnectFourEnv = gym.make("ConnectFour-v0")
 #SERVER_ADRESS = "http://localhost:8000/"
 SERVER_ADRESS = "https://vilde.cs.lth.se/edap01-4inarow/"
 API_KEY = 'nyckel'
-STIL_ID = ["fi1231ka-s"] # TODO: fill this list with your stil-id's
+STIL_ID = ["eko15mh1", "fi1231ka-s"] # TODO: fill this list with your stil-id's
 
 def call_server(move):
    res = requests.post(SERVER_ADRESS + "move",
@@ -57,7 +58,8 @@ def opponents_move(env):
    # TODO: Optional? change this to select actions with your policy too
    # that way you get way more interesting games, and you can see if starting
    # is enough to guarrantee a win
-   action = random.choice(list(avmoves))
+   action = student_move(env)
+   # action = random.choice(list(avmoves))
 
    state, reward, done, _ = env.step(action)
    if done:
@@ -66,17 +68,61 @@ def opponents_move(env):
    env.change_player() # change back to student before returning
    return state, reward, done
 
-def student_move():
+def student_move(env):
    """
    TODO: Implement your min-max alpha-beta pruning algorithm here.
    Give it whatever input arguments you think are necessary
    (and change where it is called).
    The function should return a move from 0-6
    """
-
+   depth = 5000
+   alpha = float('-inf')
+   beta = float('inf')
    
+   return alpha_beta_omega_psi_kappa_bro(env, depth, alpha, beta, True)
 
-   return random.choice([0, 1, 2, 3, 4, 5, 6])
+def alpha_beta_omega_psi_kappa_bro(env, depth, alpha, beta, maximizing_player):
+   terminal_node = len(env.available_moves()) == 0
+   if(depth == 0 or terminal_node):
+      return 0
+   
+   if maximizing_player:
+      value = float('-inf')
+      
+      for child_node in env.available_moves():
+         env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
+         env_copy.reset(board = env.board)
+         (_, reward, done, _) = env_copy.step(child_node)
+         # print('reward',reward,' done', done)
+         if done: 
+            if(reward != 1): print('found reward',reward)
+            return reward
+
+         value = max(value, alpha_beta_omega_psi_kappa_bro(env_copy, depth-1, alpha, beta, False))
+
+         if value >= beta:
+            break
+         alpha = max(alpha, value)
+      return value
+
+   else:
+      value = float('inf')
+
+      for child_node in env.available_moves():
+         env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
+         env_copy.reset(board = env.board)
+         (_, reward, done, _) = env_copy.step(child_node)
+         # print('reward',reward,' done', done)
+         if done: 
+            if(reward != 1): print('found reward',reward)
+            return reward
+         
+         value = min(value, alpha_beta_omega_psi_kappa_bro(env_copy, depth-1, alpha, beta, True))
+
+         if value <= alpha:
+            break
+         beta = min(beta, value)
+      return value
 
 def play_game(vs_server = False):
    """
@@ -122,7 +168,7 @@ def play_game(vs_server = False):
    done = False
    while not done:
       # Select your move
-      stmove = student_move() # TODO: change input here
+      stmove = student_move(env) # TODO: change input here
 
       # make both student and bot/server moves
       if vs_server:
@@ -192,6 +238,7 @@ def main():
    if args.local:
       play_game(vs_server = False)
    elif args.online:
+      print('playing online')
       play_game(vs_server = True)
 
    if args.stats:
