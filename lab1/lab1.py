@@ -1,18 +1,18 @@
-from json.encoder import INFINITY
-import gym
+import sys
 import random
 import requests
 import numpy as np
 import argparse
-import sys
+import gym
 from gym_connect_four import ConnectFourEnv
+import time
 
 env: ConnectFourEnv = gym.make("ConnectFour-v0")
 
 #SERVER_ADRESS = "http://localhost:8000/"
 SERVER_ADRESS = "https://vilde.cs.lth.se/edap01-4inarow/"
 API_KEY = 'nyckel'
-STIL_ID = ["eko15mh1", "fi1231ka-s"] # TODO: fill this list with your stil-id's
+STIL_ID = ["fi1231ka-s"] # TODO: fill this list with your stil-id's
 
 def call_server(move):
    res = requests.post(SERVER_ADRESS + "move",
@@ -75,54 +75,108 @@ def student_move(env):
    (and change where it is called).
    The function should return a move from 0-6
    """
-   depth = 5000
+   depth = 5
    alpha = float('-inf')
    beta = float('inf')
-   
-   return alpha_beta_omega_psi_kappa_bro(env, depth, alpha, beta, True)
 
-def alpha_beta_omega_psi_kappa_bro(env, depth, alpha, beta, maximizing_player):
-   terminal_node = len(env.available_moves()) == 0
+   t = time.time()
+   # return alpha_beta(env, depth, alpha, beta, True, 0, 0.9)[1]
+   move = alpha_beta1(env, 0, alpha, beta, True, depth, 0)[1]
+   print('Chose move', move, "took", time.time() - t)
+   return move
+
+def alpha_beta1(env: ConnectFourEnv, current_depth, alpha, beta, maximizing_player, max_depth, reward):
+   if current_depth == max_depth or reward != 0:
+      if maximizing_player:
+         return -reward, 0
+      else:
+         return reward, 0
+ 
+   # self.node_expanded += 1
+ 
+   possible_moves = env.available_moves()
+   best_value = float('-inf') if maximizing_player else float('inf')
+   move_target = next(iter(env.available_moves()))
+   for move in possible_moves:
+      env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
+      env_copy.reset(board = env.board)
+      if not maximizing_player: env_copy.change_player()
+      (_, reward, done, _) = env_copy.step(move)
+
+      eval_child = alpha_beta1(env_copy, current_depth+1, alpha, beta, not maximizing_player, max_depth, reward)[0]
+
+      if maximizing_player and best_value < eval_child:
+            best_value = eval_child
+            move_target = move
+            alpha = max(alpha, best_value)
+            if beta <= alpha:
+               break
+
+      elif (not maximizing_player) and best_value > eval_child:
+            best_value = eval_child
+            move_target = move
+            beta = min(beta, best_value)
+            if beta <= alpha:
+               break
+
+   return best_value, move_target
+
+def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, reward, penalty_factor):
+   terminal_node = reward != 0
    if(depth == 0 or terminal_node):
-      return 0
+      print(env.board)
+      if maximizing_player:
+         print('reward', -reward, 'depth', depth)
+         return -reward * penalty_factor, 0
+      else:
+         print('reward', reward, 'depth', depth)
+         return reward * penalty_factor, 0
+
+   env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
+   env_copy.reset(board = env.board)
    
    if maximizing_player:
-      value = float('-inf')
-      
-      for child_node in env.available_moves():
-         env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
-         env_copy.reset(board = env.board)
-         (_, reward, done, _) = env_copy.step(child_node)
-         # print('reward',reward,' done', done)
-         if done: 
-            if(reward != 1): print('found reward',reward)
-            return reward
+      max_value = float('-inf')
+      best_move = next(iter(env.available_moves()))
 
-         value = max(value, alpha_beta_omega_psi_kappa_bro(env_copy, depth-1, alpha, beta, False))
-
-         if value >= beta:
-            break
+      # print('1: maximizing player', env.available_moves())
+      for move in env.available_moves():
+         (_, reward, done, _) = env_copy.step(move)
+         # print('1: testing move', move, 'got reward', reward, 'done', done)
+         
+         value = alpha_beta(env_copy, depth-1, alpha, beta, False, reward, penalty_factor**2)[0]
+         if max_value < value:
+            max_value = value
+            # print('1: assigning best move for 1!', move)
+            best_move = move
+         print(''.join(['   ' for i in range(4-depth)]),"1: max_value", max_value, 'depth', depth, 'best_move', best_move, 'move', move)
          alpha = max(alpha, value)
-      return value
+         if beta <= alpha:
+            break
+
+      return max_value, best_move
 
    else:
-      value = float('inf')
+      min_value = float('inf')
+      best_move = next(iter(env.available_moves()))
 
-      for child_node in env.available_moves():
-         env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
-         env_copy.reset(board = env.board)
-         (_, reward, done, _) = env_copy.step(child_node)
-         # print('reward',reward,' done', done)
-         if done: 
-            if(reward != 1): print('found reward',reward)
-            return reward
+      # print('-1:   minimizing player', env.available_moves())
+      for move in env.available_moves():
+         env_copy.change_player()
+         (_, reward, done, _) = env_copy.step(move)
+         # print('-1:   testing move', move, 'got reward', reward, 'done', done)
          
-         value = min(value, alpha_beta_omega_psi_kappa_bro(env_copy, depth-1, alpha, beta, True))
+         value = alpha_beta(env_copy, depth-1, alpha, beta, True, reward, penalty_factor**2)[0]
+         if min_value > value:
+            min_value = value
+            # print('-1:   assigning best move for -1!', move)
+            best_move = move
 
-         if value <= alpha:
-            break
+         print(''.join(['   ' for i in range(4-depth)]), "-1: min_value", min_value, 'depth', depth, 'best_move', best_move, 'move', move)
          beta = min(beta, value)
-      return value
+         if beta <= alpha:
+            break
+      return min_value, move
 
 def play_game(vs_server = False):
    """
@@ -137,7 +191,19 @@ def play_game(vs_server = False):
    """
 
    # default state
-   state = np.zeros((6, 7), dtype=int)
+   # state = np.zeros((6, 7), dtype=int)
+   state = np.array( 
+      [
+         [ 0, 0, 0, 0, 0, 0, 0],
+         [ 0, 0, 0, 0, 0, 0, 0],
+         [-1, 0, 0, 0, 0, 1, 0],
+         [ 1, 1, 0, 0, 0, 1, 0],
+         [ 1,-1, 0, 0, 0, 1, 0],
+         [ 1, 1, 0, 0, 1,-1,-1]
+      ]
+    )
+   # -1 signals the system to start a new game. any running game is counted as a loss
+   res = call_server(-1)
 
    # setup new game
    if vs_server:
@@ -148,11 +214,14 @@ def play_game(vs_server = False):
       print(res.json()['msg'])
       botmove = res.json()['botmove']
       state = np.array(res.json()['state'])
+      env.reset(board=state)
    else:
       # reset game to starting state
-      env.reset(board=None)
+      # env.reset(board=None)
+      env.reset(board=state)
       # determine first player
-      student_gets_move = random.choice([True, False])
+      # student_gets_move = random.choice([True, False])
+      student_gets_move = True
       if student_gets_move:
          print('You start!')
          print()
@@ -180,6 +249,7 @@ def play_game(vs_server = False):
          result = res.json()['result']
          botmove = res.json()['botmove']
          state = np.array(res.json()['state'])
+         env.reset(board=state)
       else:
          if student_gets_move:
             # Execute your move
@@ -220,6 +290,7 @@ def play_game(vs_server = False):
       # Print current gamestate
       print(state)
       print()
+      # break
 
 def main():
    # Parse command line arguments
