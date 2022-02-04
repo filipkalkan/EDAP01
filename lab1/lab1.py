@@ -129,32 +129,37 @@ def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, rewar
          return -reward * penalty_factor, 0
       else:
          return reward * penalty_factor, 0
-
-   env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
-   env_copy.reset(board = env.board)
    
    if maximizing_player:
       max_value = float('-inf')
-      best_move = next(iter(env.available_moves()))
+      best_move = "no move"
+      moves = list(iter(env.available_moves()))
+      random.shuffle(moves)
 
-      for move in env.available_moves():
+      for move in moves:
+         env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
+         env_copy.reset(board = env.board)
          (_, reward, done, _) = env_copy.step(move)
          
          value = alpha_beta(env_copy, depth-1, alpha, beta, False, reward, penalty_factor**2)[0]
          if max_value < value:
             max_value = value
             best_move = move
-         alpha = max(alpha, value)
          if value >= beta:
             break
+         alpha = max(alpha, value)
 
       return max_value, best_move
 
    else:
       min_value = float('inf')
-      best_move = next(iter(env.available_moves()))
-
-      for move in env.available_moves():
+      best_move = "no move"
+      moves = list(iter(env.available_moves()))
+      random.shuffle(moves)
+      
+      for move in moves:
+         env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
+         env_copy.reset(board = env.board)
          env_copy.change_player()
          (_, reward, done, _) = env_copy.step(move)
          
@@ -163,9 +168,9 @@ def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, rewar
             min_value = value
             best_move = move
 
-         beta = min(beta, value)
          if value <= alpha:
             break
+         beta = min(beta, value)
       return min_value, move
 
 def play_game(vs_server = False):
@@ -181,19 +186,18 @@ def play_game(vs_server = False):
    """
 
    # default state
-   # state = np.zeros((6, 7), dtype=int)
-   state = np.array( 
-      [
-         [ 0, 0, 0, 0, 0, 0, 0],
-         [ 0, 0, 0, 0, 0, 0, 0],
-         [-1, 0, 0, 0, 0, 1, 0],
-         [ 1, 1, 0, 0, 0, 1, 0],
-         [ 1,-1, 0, 0, 0, 1, 0],
-         [ 1, 1, 0, 0, 1,-1,-1]
-      ]
-    )
+   state = np.zeros((6, 7), dtype=int)
+   # state = np.array( [
+   #       [ 1,  0,  0,  0,  0,  0,  0],
+   #       [-1,  0,  0,  0,  0,  0,  0],
+   #       [ 1, -1,  0,  0,  0,  0,  0],
+   #       [-1, -1,  0,  1,  0,  0,  0],
+   #       [ 1,  1,  0, -1, -1,  0,  0],
+   #       [ 1,  1,  1, -1, -1,  0,  0],
+   #    ]
+   #  )
    # -1 signals the system to start a new game. any running game is counted as a loss
-   res = call_server(-1)
+   # res = call_server(-1)
 
    # setup new game
    if vs_server:
