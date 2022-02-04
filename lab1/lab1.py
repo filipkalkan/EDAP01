@@ -79,9 +79,9 @@ def student_move(env):
    alpha = float('-inf')
    beta = float('inf')
 
-   t = time.time()
-   # return alpha_beta(env, depth, alpha, beta, True, 0, 0.9)[1]
-   move = alpha_beta1(env, 0, alpha, beta, True, depth, 0)[1]
+   # t = time.time()
+   return alpha_beta(env, depth, alpha, beta, True, 0, 1)[1]
+   # move = alpha_beta1(env, 0, alpha, beta, True, depth, 0)[1]
    print('Chose move', move, "took", time.time() - t)
    return move
 
@@ -124,12 +124,10 @@ def alpha_beta1(env: ConnectFourEnv, current_depth, alpha, beta, maximizing_play
 def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, reward, penalty_factor):
    terminal_node = reward != 0
    if(depth == 0 or terminal_node):
-      print(env.board)
+      # print(env.board)
       if maximizing_player:
-         print('reward', -reward, 'depth', depth)
          return -reward * penalty_factor, 0
       else:
-         print('reward', reward, 'depth', depth)
          return reward * penalty_factor, 0
 
    env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
@@ -139,19 +137,15 @@ def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, rewar
       max_value = float('-inf')
       best_move = next(iter(env.available_moves()))
 
-      # print('1: maximizing player', env.available_moves())
       for move in env.available_moves():
          (_, reward, done, _) = env_copy.step(move)
-         # print('1: testing move', move, 'got reward', reward, 'done', done)
          
          value = alpha_beta(env_copy, depth-1, alpha, beta, False, reward, penalty_factor**2)[0]
          if max_value < value:
             max_value = value
-            # print('1: assigning best move for 1!', move)
             best_move = move
-         print(''.join(['   ' for i in range(4-depth)]),"1: max_value", max_value, 'depth', depth, 'best_move', best_move, 'move', move)
          alpha = max(alpha, value)
-         if beta <= alpha:
+         if value >= beta:
             break
 
       return max_value, best_move
@@ -160,21 +154,17 @@ def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, rewar
       min_value = float('inf')
       best_move = next(iter(env.available_moves()))
 
-      # print('-1:   minimizing player', env.available_moves())
       for move in env.available_moves():
          env_copy.change_player()
          (_, reward, done, _) = env_copy.step(move)
-         # print('-1:   testing move', move, 'got reward', reward, 'done', done)
          
          value = alpha_beta(env_copy, depth-1, alpha, beta, True, reward, penalty_factor**2)[0]
          if min_value > value:
             min_value = value
-            # print('-1:   assigning best move for -1!', move)
             best_move = move
 
-         print(''.join(['   ' for i in range(4-depth)]), "-1: min_value", min_value, 'depth', depth, 'best_move', best_move, 'move', move)
          beta = min(beta, value)
-         if beta <= alpha:
+         if value <= alpha:
             break
       return min_value, move
 
