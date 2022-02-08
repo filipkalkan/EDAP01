@@ -1,11 +1,9 @@
 import sys
-import random
 import requests
 import numpy as np
 import argparse
 import gym
 from gym_connect_four import ConnectFourEnv
-import time
 
 env: ConnectFourEnv = gym.make("ConnectFour-v0")
 
@@ -79,74 +77,34 @@ def student_move(env):
    alpha = float('-inf')
    beta = float('inf')
 
-   # t = time.time()
-   return alpha_beta(env, depth, alpha, beta, True, 0, 1)[1]
-   # move = alpha_beta1(env, 0, alpha, beta, True, depth, 0)[1]
-   print('Chose move', move, "took", time.time() - t)
-   return move
+   return alpha_beta(env, depth, alpha, beta, True, 0)[1]
 
-def alpha_beta1(env: ConnectFourEnv, current_depth, alpha, beta, maximizing_player, max_depth, reward):
-   if current_depth == max_depth or reward != 0:
+def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, reward):
+   terminal_node = (reward != 0) or (depth == 0)
+   if terminal_node:
       if maximizing_player:
          return -reward, 0
       else:
          return reward, 0
- 
-   # self.node_expanded += 1
- 
-   possible_moves = env.available_moves()
-   best_value = float('-inf') if maximizing_player else float('inf')
-   move_target = next(iter(env.available_moves()))
-   for move in possible_moves:
-      env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
-      env_copy.reset(board = env.board)
-      if not maximizing_player: env_copy.change_player()
-      (_, reward, done, _) = env_copy.step(move)
-
-      eval_child = alpha_beta1(env_copy, current_depth+1, alpha, beta, not maximizing_player, max_depth, reward)[0]
-
-      if maximizing_player and best_value < eval_child:
-            best_value = eval_child
-            move_target = move
-            alpha = max(alpha, best_value)
-            if beta <= alpha:
-               break
-
-      elif (not maximizing_player) and best_value > eval_child:
-            best_value = eval_child
-            move_target = move
-            beta = min(beta, best_value)
-            if beta <= alpha:
-               break
-
-   return best_value, move_target
-
-def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, reward, penalty_factor):
-   terminal_node = reward != 0
-   if(depth == 0 or terminal_node):
-      # print(env.board)
-      if maximizing_player:
-         return -reward * penalty_factor, 0
-      else:
-         return reward * penalty_factor, 0
    
    if maximizing_player:
       max_value = float('-inf')
       best_move = "no move"
-      moves = list(iter(env.available_moves()))
-      random.shuffle(moves)
 
-      for move in moves:
+      for move in env.available_moves():
          env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
          env_copy.reset(board = env.board)
-         (_, reward, done, _) = env_copy.step(move)
+         reward = env_copy.step(move)[1]
          
-         value = alpha_beta(env_copy, depth-1, alpha, beta, False, reward, penalty_factor**2)[0]
+         value = alpha_beta(env_copy, depth-1, alpha, beta, False, reward)[0]
+
          if max_value < value:
             max_value = value
             best_move = move
+
          if value >= beta:
             break
+
          alpha = max(alpha, value)
 
       return max_value, best_move
@@ -154,24 +112,25 @@ def alpha_beta(env: ConnectFourEnv, depth, alpha, beta, maximizing_player, rewar
    else:
       min_value = float('inf')
       best_move = "no move"
-      moves = list(iter(env.available_moves()))
-      random.shuffle(moves)
       
-      for move in moves:
+      for move in env.available_moves():
          env_copy: ConnectFourEnv = gym.make("ConnectFour-v0")
          env_copy.reset(board = env.board)
          env_copy.change_player()
-         (_, reward, done, _) = env_copy.step(move)
+         reward = env_copy.step(move)[1]
          
-         value = alpha_beta(env_copy, depth-1, alpha, beta, True, reward, penalty_factor**2)[0]
+         value = alpha_beta(env_copy, depth-1, alpha, beta, True, reward)[0]
+
          if min_value > value:
             min_value = value
             best_move = move
 
          if value <= alpha:
             break
+
          beta = min(beta, value)
-      return min_value, move
+
+      return min_value, best_move
 
 def play_game(vs_server = False):
    """
