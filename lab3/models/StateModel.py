@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import random
 
 class StateModel:
+    __rows: int
+    __cols: int
 
     def __init__(self, rows, cols):
         self.__rows = rows

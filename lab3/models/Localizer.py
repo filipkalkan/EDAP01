@@ -12,8 +12,9 @@ from models import StateModel,TransitionModel,ObservationModel,RobotSimAndFilter
 class Localizer:
     __rs: RobotSimAndFilter.RobotSim
     __HMM: RobotSimAndFilter.HMMFilter
+    __sm: StateModel
 
-    def __init__(self, sm):
+    def __init__(self, sm, rows, cols):
 
         self.__sm = sm
 
@@ -22,7 +23,7 @@ class Localizer:
 
         # change in initialise in case you want to start out with something else
         # initialise can also be called again, if the filtering is to be reinitialised without a change in size
-        self.initialise()
+        self.initialise(rows, cols)
 
     # retrieve the transition model that we are currently working with
     def get_transition_model(self) -> np.array:
@@ -56,16 +57,15 @@ class Localizer:
     # if you want to start with something else, change the initialisation here!
     #
     # (re-)initialise for a new run without change of size
-    def initialise(self):
+    def initialise(self, rows, cols):
         self.__trueState = random.randint(0, self.__sm.get_num_of_states() - 1)
         self.__sense = None
         self.__probs = np.ones(self.__sm.get_num_of_states()) / (self.__sm.get_num_of_states())
         self.__estimate = self.__sm.state_to_position(np.argmax(self.__probs))
     
         # add your simulator and filter here, for example    
-        
-        self.__rs = RobotSimAndFilter.RobotSim(self._sm.__rows, self._sm.__cols)
-        self.__HMM = RobotSimAndFilter.HMMFilter()
+        self.__rs = RobotSimAndFilter.RobotSim(rows, cols)
+        self.__HMM = RobotSimAndFilter.HMMFilter(rows, cols)
 
     #  Implement the update cycle:
     #  - robot moves one step, generates new state / pose
@@ -89,11 +89,15 @@ class Localizer:
         # update all the values to something sensible instead of just reading the old values...
         
         self.__rs.move()
-        sense = self.__rs.sense()
-        print("robot senses location: " + str(sense))
-        # .... Still workin on it.
-
-
+        print("New real position" + str(self.__rs.position))
+        
+        self.__sense = self.__rs.sense()
+        print("robot senses location: " + str(self.__sense))
+        
+        self.__f = self.__HMM.forward(self.__tm, self.__sense)
+        
+        self.__estimate = self.__HMM.predict_position()
+        print("Predicted position: " + str(self.__estimate))        
 
         
         # this block can be kept as is
