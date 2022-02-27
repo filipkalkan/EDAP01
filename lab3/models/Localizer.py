@@ -10,6 +10,9 @@ import random
 from models import StateModel,TransitionModel,ObservationModel,RobotSimAndFilter
 
 class Localizer:
+    __rs: RobotSimAndFilter.RobotSim
+    __HMM: RobotSimAndFilter.HMMFilter
+
     def __init__(self, sm):
 
         self.__sm = sm
@@ -59,11 +62,11 @@ class Localizer:
         self.__probs = np.ones(self.__sm.get_num_of_states()) / (self.__sm.get_num_of_states())
         self.__estimate = self.__sm.state_to_position(np.argmax(self.__probs))
     
-    # add your simulator and filter here, for example    
+        # add your simulator and filter here, for example    
         
-        #self.__rs = RobotSimAndFilter.RobotSim( ...)
-        #self.__HMM = RobotSimAndFilter.HMMFilter( ...)
-    #
+        self.__rs = RobotSimAndFilter.RobotSim(self._sm.__rows, self._sm.__cols)
+        self.__HMM = RobotSimAndFilter.HMMFilter()
+
     #  Implement the update cycle:
     #  - robot moves one step, generates new state / pose
     #  - sensor produces one reading based on the true state / pose
@@ -84,7 +87,14 @@ class Localizer:
     #
     def update(self) -> (bool, int, int, int, int, int, int, int, int, np.array(1)) :
         # update all the values to something sensible instead of just reading the old values...
-        # 
+        
+        self.__rs.move()
+        sense = self.__rs.sense()
+        print("robot senses location: " + str(sense))
+        # .... Still workin on it.
+
+
+
         
         # this block can be kept as is
         ret = False  # in case the sensor reading is "nothing" this is kept...
