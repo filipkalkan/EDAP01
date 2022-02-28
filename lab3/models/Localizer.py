@@ -14,7 +14,7 @@ class Localizer:
     __HMM: RobotSimAndFilter.HMMFilter
     __sm: StateModel
 
-    def __init__(self, sm, rows, cols):
+    def __init__(self, sm):
 
         self.__sm = sm
 
@@ -23,6 +23,7 @@ class Localizer:
 
         # change in initialise in case you want to start out with something else
         # initialise can also be called again, if the filtering is to be reinitialised without a change in size
+        (rows, cols, h) = sm.get_grid_dimensions()
         self.initialise(rows, cols)
 
     # retrieve the transition model that we are currently working with
@@ -87,15 +88,20 @@ class Localizer:
     #
     def update(self) -> (bool, int, int, int, int, int, int, int, int, np.array(1)) :
         # update all the values to something sensible instead of just reading the old values...
+        print()
+        new_pose = self.__rs.move()
+        self.__trueState = self.__sm.pose_to_state(new_pose[0], new_pose[1], new_pose[2])
         
-        self.__rs.move()
-        print("New real position" + str(self.__rs.position))
+        sense_position = self.__rs.sense()
+
+        if sense_position != None:
+            self.__sense = self.__sm.position_to_reading(sense_position[0], sense_position[1])
+        else:
+            self.__sense = None
+            
+        o = self.__om.get_o_reading(self.__sense)
         
-        self.__sense = self.__rs.sense()
-        print("robot senses location: " + str(self.__sense))
-        
-        self.__f = self.__HMM.forward(self.__tm, self.__sense)
-        
+        self.__probs = self.__HMM.forward(self.__tm.get_T_transp(), o)
         self.__estimate = self.__HMM.predict_position()
         print("Predicted position: " + str(self.__estimate))        
 
