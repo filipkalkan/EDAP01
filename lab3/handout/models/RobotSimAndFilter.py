@@ -108,10 +108,8 @@ class HMMFilter:
         self.__f_matrix = O.dot(t.get_T_transp()).dot(f)
         self.__f_matrix /= np.sum(self.__f_matrix)
 
-        max_prob_idx = np.argmax(self.__f_matrix)
-        rows, cols, headings = self.__state_model.get_grid_dimensions()
-        x = (max_prob_idx // 4) // rows
-        y = (max_prob_idx // 4) % rows
+        most_probable_position = np.argmax(self.__f_matrix)
+        x, y = self.__state_model.reading_to_position(most_probable_position // 4)
         return (x, y), self.__f_matrix
 
         
