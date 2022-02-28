@@ -20,11 +20,11 @@ class RobotSim:
         if random.random() <= 0.3: 
             self.change_direction()
         if self.is_facing_wall():
+            self.change_direction()
             while self.is_facing_wall():
                 self.change_direction()
 
         self.position = self.simulate_move_forward()
-        print("Robot moved to position" + str(self.position))
         return (self.position[0], self.position[1], self.heading)
 
     # Returns the position based on sensor reading.
@@ -105,6 +105,7 @@ class HMMFilter:
 
     def forward(self, t_transpose, o):
         self.f = o.dot(t_transpose).dot(self.f)
+        self.f /= np.sum(self.f)
         
         return self.f
 

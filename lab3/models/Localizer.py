@@ -83,16 +83,20 @@ class Localizer:
     #  - true if sensor reading was not "nothing", else false,
     #  - AND the three values for the (new) true pose (x, y, h),
     #  - AND the two values for the (current) sensor reading (if not "nothing")
+    #  - AND the two values for the estimated pose (x, y)
     #  - AND the error made in this step
     #  - AND the new probability distribution
     #
-    def update(self) -> (bool, int, int, int, int, int, int, int, int, np.array(1)) :
+    def update(self, verbose=False) -> (bool, int, int, int, int, int, int, int, int, np.array(1)) :
         # update all the values to something sensible instead of just reading the old values...
-        print()
         new_pose = self.__rs.move()
+        if verbose: print()
+        if verbose: print('Moved to position: (', new_pose[0], new_pose[1],')')
+
         self.__trueState = self.__sm.pose_to_state(new_pose[0], new_pose[1], new_pose[2])
         
         sense_position = self.__rs.sense()
+        if verbose: print('Sensed position', sense_position)
 
         if sense_position != None:
             self.__sense = self.__sm.position_to_reading(sense_position[0], sense_position[1])
@@ -103,7 +107,7 @@ class Localizer:
         
         self.__probs = self.__HMM.forward(self.__tm.get_T_transp(), o)
         self.__estimate = self.__HMM.predict_position()
-        print("Predicted position: " + str(self.__estimate))        
+        if verbose: print("Predicted position: " + str(self.__estimate))        
 
         
         # this block can be kept as is
@@ -118,8 +122,8 @@ class Localizer:
         eX, eY = self.__estimate
         
         # this should be updated to spit out the actual error for this step
-        error = 10.0                
-        
+        error = abs(tsX - eX) + abs(tsY - eY)
+
         # if you use the visualisation (dashboard), this return statement needs to be kept the same
         # or the visualisation needs to be adapted (your own risk!)
         return ret, tsX, tsY, tsH, srX, srY, eX, eY, error, self.__probs
