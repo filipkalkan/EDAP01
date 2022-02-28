@@ -66,7 +66,7 @@ class Localizer:
     
         # add your simulator and filter here, for example    
         self.__rs = RobotSimAndFilter.RobotSim(rows, cols)
-        self.__HMM = RobotSimAndFilter.HMMFilter(rows, cols)
+        self.__HMM = RobotSimAndFilter.HMMFilter(rows, cols, self.__sm)
 
     #  Implement the update cycle:
     #  - robot moves one step, generates new state / pose
